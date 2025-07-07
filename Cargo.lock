@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "msnchat45-bindings"
+name = "msnchat-bindings"
 version = "0.1.0"
