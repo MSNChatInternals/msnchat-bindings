@@ -1,5 +1,5 @@
 [package]
-name = "msnchat45-bindings"
+name = "msnchat-bindings"
 version = "0.1.0"
 edition = "2024"
 
