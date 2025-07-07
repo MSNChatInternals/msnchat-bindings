@@ -37,36 +37,38 @@ You can now call into the raw COM interfaces or exported functions defined in th
 ## 🛠 Requirements
 
 - Rust 1.70+ recommended
-- Windows SDK (for building and linking against COM types)
 - The original `MSNChat45.ocx` must be registered via `regsvr32` if you intend to instantiate the control
 
 ---
 
 ## 🧠 Example (COM Instantiation)
 
-```
-use windows::Win32::System::Com::{
-    CoInitializeEx, CoCreateInstance, CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED,
-};
-use windows::core::GUID;
-use msnchat_bindings::bindings::IMSNAddin;
+```rust
+use msnchat_bindings::ChatFrame;
+use windows::core::Result;
 
-unsafe {
-    CoInitializeEx(std::ptr::null_mut(), COINIT_APARTMENTTHREADED).unwrap();
+fn main() -> Result<()> {
+    // Initialize COM (required before using COM interfaces)
+    unsafe { windows::Win32::System::Com::CoInitializeEx(std::ptr::null_mut(), windows::Win32::System::Com::COINIT_APARTMENTTHREADED)? };
 
-    let clsid = GUID::from("YOUR-CLSID-HERE");
-    let mut obj = std::ptr::null_mut();
-    CoCreateInstance(
-        &clsid,
-        None,
-        CLSCTX_INPROC_SERVER,
-        &IMSNAddin::IID,
-        &mut obj as *mut _ as _,
-    )
-    .unwrap();
+    // Create a new ChatFrame instance
+    let chat = ChatFrame::create()?;
 
-    let addin = obj as *mut IMSNAddin;
-    ((*(*addin).lpVtbl).OnLogon)(addin /*, args */);
+    // Set some visual properties
+    chat.set_back_color(Some(0x00FFCC))?;
+    chat.set_button_back_color(Some(0x003366))?;
+    chat.set_button_text_color(Some(0xFFFFFF))?;
+
+    // Set server metadata
+    chat.set_server(Some("irc.irc7.com"))
+    chat.set_room_name(Some("The Lobby"))?;
+    chat.set_nick_name(Some("Ferris"))?;
+
+    // Optionally clear a BSTR property
+    chat.set_welcome_msg(None)?;
+
+    println!("ChatFrame configured successfully.");
+    Ok(())
 }
 ```
 
