@@ -3,7 +3,7 @@ use windows::{
         Com::{CLSCTX_INPROC_SERVER, CoCreateInstance},
         Ole::IOleObject,
     },
-    core::{Interface, Result},
+    core::{Interface, Result, GUID},
 };
 
 use crate::bindings::{
@@ -11,14 +11,44 @@ use crate::bindings::{
     ichat_settings::{IChatSettings, IChatSettingsVtbl},
 };
 
+#[derive(Clone)]
 pub struct ChatSettings {
     ptr: *mut IChatSettings,
 }
 
+unsafe impl Interface for ChatSettings {
+    type Vtable = IChatSettingsVtbl; // from bindgen
+
+    const IID: GUID = IID_IChatSettings;
+
+    fn as_raw(&self) -> *mut std::ffi::c_void {
+        self.ptr as *mut _
+    }
+
+    unsafe fn from_raw(raw: *mut std::ffi::c_void) -> Self {
+        Self { ptr: raw as *mut IChatSettings }
+    }
+
+    fn vtable(&self) -> &Self::Vtable {
+        unsafe {
+            &*(*self.ptr).lpVtbl
+        }
+    }
+}
+
 impl ChatSettings {
     /// Constructs a `ChatSettings` from a raw COM pointer.
-    pub fn from_raw(ptr: *mut IChatSettings) -> Self {
+    pub unsafe fn from_raw(ptr: *mut IChatSettings) -> Self {
         Self { ptr }
+    }
+
+    pub fn as_ptr(&self) -> *mut IChatSettings {
+        self.ptr
+    }
+
+    pub fn as_ref(&self) -> &IChatSettings {
+        assert!(!self.ptr.is_null());
+        unsafe { &*self.ptr }
     }
 
     /// Creates a new `ChatSettings` instance via `CoCreateInstance`.
@@ -35,7 +65,7 @@ impl ChatSettings {
 
         // Step 3: Cast to your bindgen interface
         let ptr = raw_ptr as *mut IChatSettings;
-        Ok(Self::from_raw(ptr))
+        Ok(unsafe { Self::from_raw(ptr) })
     }
 
     fn vtbl(&self) -> &IChatSettingsVtbl {

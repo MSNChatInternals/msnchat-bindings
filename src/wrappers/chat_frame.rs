@@ -1,24 +1,48 @@
 use windows::{
-    Win32::System::{
-        Com::{CLSCTX_INPROC_SERVER, CoCreateInstance},
-        Ole::IOleObject,
-    },
-    core::{Interface, Result},
+    core::{Interface, Result, GUID}, Win32::System::{
+        Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
+        Ole::{IOleObject},
+    }
 };
 
 use crate::bindings::{
-    guids::{CLSID_MSNChatFrame, IID_IChatFrame},
+    guids::{self, CLSID_MSNChatFrame, IID_IChatFrame},
     ichat_frame::{IChatFrame, IChatFrameVtbl},
 };
 
+#[derive(Clone)]
 pub struct ChatFrame {
     ptr: *mut IChatFrame,
 }
 
+unsafe impl Interface for ChatFrame {
+    type Vtable = IChatFrameVtbl; // from bindgen
+
+    const IID: GUID = IID_IChatFrame;
+
+    fn as_raw(&self) -> *mut std::ffi::c_void {
+        self.ptr as *mut _
+    }
+
+    unsafe fn from_raw(raw: *mut std::ffi::c_void) -> Self {
+        Self { ptr: raw as *mut IChatFrame }
+    }
+
+    fn vtable(&self) -> &Self::Vtable {
+        unsafe {
+            &*(*self.ptr).lpVtbl
+        }
+    }
+}
+
 impl ChatFrame {
     /// Constructs a `ChatFrame` from a raw COM pointer.
-    pub fn from_raw(ptr: *mut IChatFrame) -> Self {
+    pub unsafe fn from_raw(ptr: *mut IChatFrame) -> Self {
         Self { ptr }
+    }
+
+    pub fn as_ptr(&self) -> *mut IChatFrame {
+        self.ptr
     }
 
     /// Creates a new `ChatFrame` instance via `CoCreateInstance`.
@@ -35,7 +59,7 @@ impl ChatFrame {
 
         // Step 3: Cast to your bindgen interface
         let ptr = raw_ptr as *mut IChatFrame;
-        Ok(Self::from_raw(ptr))
+        Ok(unsafe { Self::from_raw(ptr) })
     }
 
     fn vtbl(&self) -> &IChatFrameVtbl {
